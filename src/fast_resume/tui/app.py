@@ -18,9 +18,16 @@ from textual.widgets import Footer, Input, Label
 from .. import __version__
 from ..adapters.base import ParseError, Session
 from ..config import LOG_FILE
+from ..desktop import (
+    build_handoff_prompt,
+    get_desktop_target,
+    get_handoff_targets,
+    get_native_desktop_target,
+    open_in_desktop_app,
+)
 from ..search import SessionSearch
 from .filter_bar import FILTER_KEYS, FilterBar
-from .modal import YoloModeModal
+from .modal import DesktopAppPickerModal, YoloModeModal
 from .preview import SessionPreview
 from .query import extract_agent_from_query, update_agent_in_query
 from .results_table import ResultsTable
@@ -47,6 +54,8 @@ class FastResumeApp(App):
         Binding("/", "focus_search", "Search", priority=True),
         Binding("enter", "resume_session", "Resume"),
         Binding("c", "copy_path", "Copy resume command", priority=True),
+        Binding("o", "open_desktop_app", "Open App", priority=True),
+        Binding("h", "handoff_session", "Handoff", priority=True),
         Binding("ctrl+grave_accent", "toggle_preview", "Preview", priority=True),
         Binding("tab", "accept_suggestion", "Accept", show=False, priority=True),
         Binding("j", "cursor_down", "Down", show=False),
@@ -476,6 +485,87 @@ class FastResumeApp(App):
         if result is not None:
             self._do_copy_command(yolo=result)
 
+    def action_open_desktop_app(self) -> None:
+        """Open the selected session in its native desktop app."""
+        if not self.selected_session:
+            return
+
+        target = get_native_desktop_target(self.selected_session.agent)
+        if target is None:
+            self.notify(
+                f"No native desktop app bridge is configured for {self.selected_session.agent}.",
+                severity="warning",
+                timeout=3,
+            )
+            return
+
+        opened, message = open_in_desktop_app(target, self.selected_session.directory)
+        self.notify(
+            message,
+            severity="information" if opened else "warning",
+            timeout=4,
+        )
+
+    def action_handoff_session(self) -> None:
+        """Open a selected session as a cross-app handoff."""
+        if not self.selected_session:
+            return
+
+        targets = get_handoff_targets(self.selected_session.agent)
+        if not targets:
+            self.notify(
+                "No installed desktop apps are available for cross-app handoff.",
+                severity="warning",
+                timeout=3,
+            )
+            return
+
+        self.push_screen(
+            DesktopAppPickerModal(targets),
+            self._on_desktop_handoff_target_selected,
+        )
+
+    def _on_desktop_handoff_target_selected(self, target_id: str | None) -> None:
+        """Handle desktop handoff target selection."""
+        if target_id is not None:
+            self._do_desktop_handoff(target_id)
+
+    def _do_desktop_handoff(self, target_id: str) -> None:
+        """Copy a handoff prompt and open the selected desktop app."""
+        assert self.selected_session is not None
+
+        target = get_desktop_target(target_id)
+        if target is None:
+            self.notify("Unknown desktop app target.", severity="warning", timeout=3)
+            return
+
+        prompt = build_handoff_prompt(self.selected_session, target)
+        copied = copy_to_clipboard(prompt)
+        opened, message = open_in_desktop_app(target, self.selected_session.directory)
+
+        if opened and copied:
+            self.notify(
+                f"Opened {target.label} and copied handoff prompt.",
+                timeout=4,
+            )
+            return
+        if opened:
+            self.notify(
+                f"{message}. Clipboard unavailable for handoff prompt.",
+                severity="warning",
+                timeout=5,
+            )
+            return
+        if copied:
+            self.notify(
+                f"{message}. Handoff prompt was still copied.",
+                severity="warning",
+                timeout=5,
+            )
+            return
+
+        self.notify(message, severity="warning", timeout=5)
+
     def action_resume_session(self) -> None:
         """Resume the selected session."""
         if not self.selected_session:
@@ -588,6 +678,9 @@ class FastResumeApp(App):
         if isinstance(self.screen, YoloModeModal):
             self.screen.action_toggle_focus()
             return
+        if isinstance(self.screen, DesktopAppPickerModal):
+            self.screen.action_focus_next()
+            return
         search_input = self.query_one("#search-input", Input)
         if search_input._suggestion:
             search_input.action_cursor_right()
@@ -605,7 +698,7 @@ class FastResumeApp(App):
         """Quit the app, or dismiss modal if one is open."""
         if len(self.screen_stack) > 1:
             top_screen = self.screen_stack[-1]
-            if isinstance(top_screen, YoloModeModal):
+            if hasattr(top_screen, "dismiss"):
                 top_screen.dismiss(None)
             return
         self.exit()

@@ -2,12 +2,14 @@
 
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from rich.text import Text
 
 from fast_resume.adapters.base import Session
+from fast_resume.desktop import DesktopAppTarget
 from fast_resume.tui import (
     FastResumeApp,
     KeywordSuggester,
@@ -64,6 +66,12 @@ class TestAppConfiguration:
         """Test the generic Textual command palette is not exposed."""
         assert FastResumeApp.ENABLE_COMMAND_PALETTE is False
         assert all(binding.key != "ctrl+p" for binding in FastResumeApp.BINDINGS)
+
+    def test_desktop_bridge_bindings_exist(self):
+        """Desktop bridge actions should be discoverable in the footer."""
+        binding_map = {binding.key: binding.description for binding in FastResumeApp.BINDINGS}
+        assert binding_map["o"] == "Open App"
+        assert binding_map["h"] == "Handoff"
 
 
 class TestFormatTimeAgo:
@@ -1056,6 +1064,93 @@ class TestFastResumeAppResumeCommand:
                 # Should be first session
                 directory = app.get_resume_directory()
                 assert directory == "/home/user/web-app"
+
+    @pytest.mark.asyncio
+    async def test_open_desktop_app_uses_native_bridge(
+        self, mock_search_engine, sample_sessions
+    ):
+        """Pressing o should open the selected session in its native desktop app."""
+        target = DesktopAppTarget(
+            id="codex",
+            label="Codex",
+            bundle_id="com.openai.codex",
+            app_path=Path("/Applications/Codex.app"),
+        )
+        sample_sessions[0].agent = "codex"
+
+        with (
+            patch("fast_resume.tui.app.SessionSearch", return_value=mock_search_engine),
+            patch("fast_resume.tui.app.get_native_desktop_target", return_value=target),
+            patch(
+                "fast_resume.tui.app.open_in_desktop_app",
+                return_value=(True, "Opened Codex"),
+            ) as mock_open,
+        ):
+            app = FastResumeApp()
+            app.notify = MagicMock()
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.action_open_desktop_app()
+                await pilot.pause()
+
+        mock_open.assert_called_once_with(target, "/home/user/web-app")
+
+    @pytest.mark.asyncio
+    async def test_desktop_handoff_opens_target_and_copies_prompt(
+        self, mock_search_engine, sample_sessions
+    ):
+        """Desktop handoff should open the target app and copy a prompt."""
+        target = DesktopAppTarget(
+            id="codex",
+            label="Codex",
+            bundle_id="com.openai.codex",
+            app_path=Path("/Applications/Codex.app"),
+        )
+
+        with (
+            patch("fast_resume.tui.app.SessionSearch", return_value=mock_search_engine),
+            patch("fast_resume.tui.app.get_desktop_target", return_value=target),
+            patch("fast_resume.tui.app.copy_to_clipboard", return_value=True) as mock_copy,
+            patch(
+                "fast_resume.tui.app.open_in_desktop_app",
+                return_value=(True, "Opened Codex"),
+            ) as mock_open,
+        ):
+            app = FastResumeApp()
+            app.notify = MagicMock()
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._do_desktop_handoff("codex")
+                await pilot.pause()
+
+        mock_copy.assert_called_once()
+        mock_open.assert_called_once_with(target, "/home/user/web-app")
+        app.notify.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_handoff_action_opens_picker_when_targets_exist(
+        self, mock_search_engine
+    ):
+        """Pressing h should open the desktop target picker when choices exist."""
+        target = DesktopAppTarget(
+            id="claude",
+            label="Claude",
+            bundle_id="com.anthropic.claudefordesktop",
+            app_path=Path("/Applications/Claude.app"),
+        )
+
+        with (
+            patch("fast_resume.tui.app.SessionSearch", return_value=mock_search_engine),
+            patch("fast_resume.tui.app.get_handoff_targets", return_value=[target]),
+        ):
+            app = FastResumeApp()
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.push_screen = MagicMock()
+                app.action_handoff_session()
+                await pilot.pause()
+
+        app.push_screen.assert_called_once()
 
 
 class TestFastResumeAppYoloModal:

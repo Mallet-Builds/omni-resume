@@ -114,8 +114,12 @@ Inside the TUI:
 - `PageUp` / `PageDown` jump by larger steps
 - `Enter` resumes the selected session
 - `c` copies the full resume command
+- `o` opens the selected session's native desktop app in that project
+- `h` opens a cross-app handoff picker, copies a handoff prompt, and launches the target desktop app
 - `/` jumps back to search
 - `Ctrl+`` toggles the preview pane
+
+`Enter` is kept strict: it only does a true native resume for the same agent. Cross-app moves are explicit handoffs, not fake resumes.
 
 ### Filter by agent
 

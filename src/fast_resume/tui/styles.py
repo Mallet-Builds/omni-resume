@@ -39,6 +39,43 @@ YoloModeModal Button:focus {
 }
 """
 
+APP_PICKER_MODAL_CSS = """
+DesktopAppPickerModal {
+    align: center middle;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+DesktopAppPickerModal > Vertical {
+    width: 44;
+    height: auto;
+    background: $surface;
+    border: thick $primary 80%;
+    padding: 1 2;
+}
+
+DesktopAppPickerModal #title {
+    text-align: center;
+    text-style: bold;
+    width: 100%;
+}
+
+DesktopAppPickerModal #subtitle {
+    color: $text-muted;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+DesktopAppPickerModal Button {
+    width: 100%;
+    margin: 0 0 1 0;
+    pointer: pointer;
+}
+
+DesktopAppPickerModal Button:focus {
+    background: $warning;
+}
+"""
+
 # CSS for the main FastResumeApp
 APP_CSS = """
 Screen {
