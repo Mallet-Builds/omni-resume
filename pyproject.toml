@@ -21,6 +21,7 @@ dependencies = [
     "textual-image>=0.8.4",
     "orjson>=3.10.0",
     "tantivy>=0.25.0",
+    "mcp",
 ]
 
 [project.urls]
@@ -31,6 +32,7 @@ Issues = "https://github.com/Mallet-Dev/omni-resume/issues"
 [project.scripts]
 omni-resume = "fast_resume.cli:main"
 fr = "fast_resume.cli:main"
+omni-resume-mcp = "fast_resume.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -36,6 +36,7 @@ That gets worse once you spread work across multiple surfaces:
 - One TUI for all supported agents
 - Native resume where the agent exposes a stable session identifier
 - Explicit fallbacks where the agent does not
+- MCP tools for Antigravity and other IDE surfaces
 
 ## Support matrix
 
@@ -58,6 +59,8 @@ That gets worse once you spread work across multiple surfaces:
 - Hermes direct resume support via `hermes --resume <session_id>`
 - Antigravity direct resume support via `gemini --resume <uuid>`
 - Rebranded package, cache path, and CLI metadata for standalone public use
+- Antigravity plugin scaffold in `antigravity-plugin/`
+- MCP server entry point via `omni-resume-mcp`
 
 ## Installation
 
@@ -97,6 +100,23 @@ or:
 fr
 ```
 
+### Browse the index
+
+```bash
+omni-resume --stats
+omni-resume --no-tui "agent:antigravity"
+omni-resume --no-tui "workspace memory"
+```
+
+Inside the TUI:
+
+- `↑` / `↓` move the cursor
+- `PageUp` / `PageDown` jump by larger steps
+- `Enter` resumes the selected session
+- `c` copies the full resume command
+- `/` jumps back to search
+- `Ctrl+`` toggles the preview pane
+
 ### Filter by agent
 
 ```bash
@@ -122,6 +142,18 @@ fr --no-tui
 fr --stats
 fr --rebuild
 ```
+
+### Antigravity plugin
+
+The plugin lives in `antigravity-plugin/`.
+
+Install it by copying that folder into `~/.gemini/config/plugins/omni-resume` or a workspace `.agents/plugins/` folder, then ensure `omni-resume-mcp` is installed and available on `PATH`.
+
+The plugin gives Antigravity a thin MCP front door for searching sessions, resolving resume commands, and refreshing the index. It does not replace the background ingestion pipeline.
+
+### Hermes and Codex
+
+Hermes and Codex can use the same `omni-resume-mcp` server through their MCP configs. Antigravity uses the plugin shell on top of that same server.
 
 ## Yolo support
 
@@ -174,10 +206,10 @@ uv run pytest tests/test_antigravity_adapter.py -q
 
 ## Roadmap
 
-- Exact Antigravity resume once the CLI exposes a stable session identifier
 - Additional agent adapters for teams running more than one IDE surface
 - Better packaging and release automation for Homebrew and PyPI
 - Optional per-workspace wrappers for noisy global installs
+- A richer Antigravity UI wrapper around the MCP tools
 
 ## Credits
 

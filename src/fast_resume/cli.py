@@ -98,9 +98,7 @@ def main(
     setup_logging()
 
     if stats:
-        # Sync before showing stats to ensure accurate data
         search = SessionSearch()
-        search.get_all_sessions()
         _show_stats()
         return
 

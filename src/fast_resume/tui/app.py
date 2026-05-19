@@ -158,7 +158,7 @@ class FastResumeApp(App):
             self._total_loaded = len(sessions)
             start_time = time.perf_counter()
             self.sessions = self.search_engine.search(
-                self.initial_query, agent_filter=self.active_filter, limit=100
+                self.initial_query, agent_filter=self.active_filter
             )
             self.query_time_ms = (time.perf_counter() - start_time) * 1000
             self._finish_loading()
@@ -212,7 +212,7 @@ class FastResumeApp(App):
             query = self.initial_query
             start_time = time.perf_counter()
             sessions = self.search_engine.search(
-                query, agent_filter=self.active_filter, limit=100
+                query, agent_filter=self.active_filter
             )
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             total = self.search_engine.get_session_count()
@@ -334,7 +334,7 @@ class FastResumeApp(App):
         self._current_query = query
         start_time = time.perf_counter()
         sessions = self.search_engine.search(
-            query, agent_filter=self.active_filter, limit=100
+            query, agent_filter=self.active_filter
         )
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         # Update UI from worker thread via call_from_thread

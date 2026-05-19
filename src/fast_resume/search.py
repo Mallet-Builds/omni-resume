@@ -234,7 +234,7 @@ class SessionSearch:
         query: str,
         agent_filter: str | None = None,
         directory_filter: str | None = None,
-        limit: int = 100,
+        limit: int | None = None,
     ) -> list[Session]:
         """Search sessions using Tantivy full-text search with fuzzy matching.
 
@@ -267,7 +267,11 @@ class SessionSearch:
         # During streaming, _sessions_by_id is updated incrementally
         # Only call get_all_sessions() if not streaming and no sessions loaded yet
         if not self._streaming_in_progress and self._sessions is None:
-            self.get_all_sessions()
+            loaded = self._load_from_index()
+            if loaded is not None:
+                self._sessions = loaded
+            else:
+                self.get_all_sessions()
 
         # Use Tantivy for all searching and filtering
         results = self._index.search(
@@ -316,3 +320,17 @@ class SessionSearch:
         if adapter:
             return adapter.get_resume_command(session, yolo=yolo)
         return []
+
+    def get_session_by_id(self, session_id: str) -> Session | None:
+        """Get a session by its exact identifier."""
+        if self._sessions is None:
+            loaded = self._load_from_index()
+            if loaded is not None:
+                self._sessions = loaded
+            else:
+                self.get_all_sessions()
+        return self._sessions_by_id.get(session_id)
+
+    def get_stats(self) -> IndexStats:
+        """Get current index statistics."""
+        return self._index.get_stats()

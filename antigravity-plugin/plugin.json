@@ -1,0 +1,10 @@
+{
+  "name": "omni-resume",
+  "version": "0.1.0",
+  "description": "Unified session search and resume for Antigravity and other coding agents.",
+  "author": {
+    "name": "Mallet Dev"
+  },
+  "repository": "https://github.com/Mallet-Dev/omni-resume",
+  "license": "MIT"
+}

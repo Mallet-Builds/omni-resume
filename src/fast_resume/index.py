@@ -468,7 +468,7 @@ class TantivyIndex:
         agent_filter: Filter | None = None,
         directory_filter: Filter | None = None,
         date_filter: DateFilter | None = None,
-        limit: int = 100,
+        limit: int | None = None,
     ) -> list[tuple[str, float]]:
         """Search the index and return (session_id, score) pairs.
 
@@ -518,15 +518,17 @@ class TantivyIndex:
 
             # When no text search query, sort by timestamp (newest first)
             # When there's a text query, sort by relevance score (default)
+            search_limit = searcher.num_docs if limit is None else limit
+
             if not query.strip():
                 results = searcher.search(
                     combined_query,
-                    limit,
+                    search_limit,
                     order_by_field="timestamp",
                     order=tantivy.Order.Desc,
                 ).hits
             else:
-                results = searcher.search(combined_query, limit).hits
+                results = searcher.search(combined_query, search_limit).hits
 
             # Extract session IDs and scores
             output = []

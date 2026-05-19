@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "omni-resume": {
+      "command": "omni-resume-mcp"
+    }
+  }
+}
