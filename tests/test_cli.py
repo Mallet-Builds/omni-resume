@@ -11,7 +11,12 @@ from click.testing import CliRunner
 
 from fast_resume.adapters.claude import ClaudeAdapter
 from fast_resume.adapters.vibe import VibeAdapter
-from fast_resume.cli import main, _list_sessions, _show_stats
+from fast_resume.cli import (
+    _list_sessions,
+    _resolve_resume_executable,
+    _show_stats,
+    main,
+)
 from fast_resume.index import TantivyIndex
 from fast_resume.search import SessionSearch
 
@@ -297,29 +302,67 @@ class TestTUIResumeIntegration:
         with (
             patch("fast_resume.cli.run_tui") as mock_run_tui,
             patch("fast_resume.cli.os.chdir") as mock_chdir,
-            patch("fast_resume.cli.os.execvp") as mock_execvp,
+            patch("fast_resume.cli.os.execv") as mock_execv,
+            patch("fast_resume.cli._resolve_resume_executable") as mock_resolve,
         ):
             mock_run_tui.return_value = (
                 ["claude", "--resume", "123"],
                 "/home/user/project",
             )
+            mock_resolve.return_value = "/usr/local/bin/claude"
             cli_runner.invoke(main, [])
 
         mock_chdir.assert_called_once_with("/home/user/project")
-        mock_execvp.assert_called_once_with("claude", ["claude", "--resume", "123"])
+        mock_execv.assert_called_once_with(
+            "/usr/local/bin/claude", ["claude", "--resume", "123"]
+        )
 
     def test_tui_resume_without_directory(self, cli_runner):
         """Test resume when session has no directory."""
         with (
             patch("fast_resume.cli.run_tui") as mock_run_tui,
             patch("fast_resume.cli.os.chdir") as mock_chdir,
-            patch("fast_resume.cli.os.execvp") as mock_execvp,
+            patch("fast_resume.cli.os.execv") as mock_execv,
+            patch("fast_resume.cli._resolve_resume_executable") as mock_resolve,
         ):
             mock_run_tui.return_value = (["vibe", "resume", "456"], None)
+            mock_resolve.return_value = "/usr/local/bin/vibe"
             cli_runner.invoke(main, [])
 
         mock_chdir.assert_not_called()
-        mock_execvp.assert_called_once()
+        mock_execv.assert_called_once()
+
+    def test_tui_resume_missing_executable_exits_cleanly(self, cli_runner):
+        """Test missing resume binary returns a useful CLI error."""
+        with (
+            patch("fast_resume.cli.run_tui") as mock_run_tui,
+            patch("fast_resume.cli._resolve_resume_executable", return_value=None),
+        ):
+            mock_run_tui.return_value = (["gemini", "--resume", "abc123"], None)
+            result = cli_runner.invoke(main, [])
+
+        assert result.exit_code != 0
+        assert "Unable to find the executable for `gemini`" in result.output
+
+
+class TestExecutableResolution:
+    """Tests for resume executable resolution."""
+
+    def test_resolve_resume_executable_prefers_path(self):
+        """Test PATH lookup is used when available."""
+        with patch("fast_resume.cli.shutil.which", return_value="/usr/local/bin/codex"):
+            assert _resolve_resume_executable("codex") == "/usr/local/bin/codex"
+
+    def test_resolve_resume_executable_uses_known_fallback(self):
+        """Test known fallback path is used when PATH lookup fails."""
+        with (
+            patch("fast_resume.cli.shutil.which", return_value=None),
+            patch("fast_resume.cli.os.path.exists", return_value=True),
+        ):
+            assert (
+                _resolve_resume_executable("gemini")
+                == "/opt/homebrew/bin/gemini"
+            )
 
 
 class TestOutputFormatting:

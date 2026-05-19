@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class FastResumeApp(App):
     """Main TUI application for omni-resume."""
 
-    ENABLE_COMMAND_PALETTE = True
+    ENABLE_COMMAND_PALETTE = False
     TITLE = "omni-resume"
     SUB_TITLE = "Session manager"
 
@@ -58,7 +58,6 @@ class FastResumeApp(App):
         Binding("plus", "increase_preview", "+Preview", show=False),
         Binding("equals", "increase_preview", "+Preview", show=False),
         Binding("minus", "decrease_preview", "-Preview", show=False),
-        Binding("ctrl+p", "command_palette", "Commands"),
     ]
 
     show_preview: reactive[bool] = reactive(True)

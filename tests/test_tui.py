@@ -57,6 +57,15 @@ class TestFormatDirectory:
         assert result == "relative/path"
 
 
+class TestAppConfiguration:
+    """Tests for TUI app configuration."""
+
+    def test_command_palette_is_disabled(self):
+        """Test the generic Textual command palette is not exposed."""
+        assert FastResumeApp.ENABLE_COMMAND_PALETTE is False
+        assert all(binding.key != "ctrl+p" for binding in FastResumeApp.BINDINGS)
+
+
 class TestFormatTimeAgo:
     """Tests for format_time_ago function."""
 

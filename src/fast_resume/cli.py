@@ -1,6 +1,7 @@
 """CLI entry point for omni-resume."""
 
 import os
+import shutil
 
 import click
 import humanize
@@ -13,6 +14,29 @@ from .index import TantivyIndex
 from .logging_config import setup_logging
 from .search import SessionSearch
 from .tui import run_tui
+
+
+_EXECUTABLE_FALLBACKS = {
+    "codex": "/Applications/Codex.app/Contents/Resources/codex",
+    "gemini": "/opt/homebrew/bin/gemini",
+    "hermes": os.path.expanduser("~/.local/bin/hermes"),
+}
+
+
+def _resolve_resume_executable(command: str) -> str | None:
+    """Resolve a resume command binary to an executable path."""
+    if os.path.isabs(command):
+        return command if os.path.exists(command) else None
+
+    resolved = shutil.which(command)
+    if resolved:
+        return resolved
+
+    fallback = _EXECUTABLE_FALLBACKS.get(command)
+    if fallback and os.path.exists(fallback):
+        return fallback
+
+    return None
 
 
 @click.command()
@@ -123,8 +147,15 @@ def main(
             # Change to session directory before running command
             if resume_dir:
                 os.chdir(resume_dir)
-            # Execute the resume command
-            os.execvp(resume_cmd[0], resume_cmd)
+            executable = _resolve_resume_executable(resume_cmd[0])
+            if not executable:
+                raise click.ClickException(
+                    "Unable to find the executable for "
+                    f"`{resume_cmd[0]}`. Try `omni-resume --list` and use `c` in the "
+                    "TUI to copy the resume command, then verify that the target "
+                    "agent CLI is installed and on PATH."
+                )
+            os.execv(executable, resume_cmd)
 
 
 def _show_stats() -> None:
