@@ -271,7 +271,16 @@ class SessionSearch:
             if loaded is not None:
                 self._sessions = loaded
             else:
-                self.get_all_sessions()
+                try:
+                    self.get_all_sessions()
+                except ValueError as exc:
+                    # If another process is writing the index, keep search read-only
+                    # and serve results from the current indexed snapshot.
+                    if "LockBusy" not in str(exc):
+                        raise
+                    self._sessions = self._index.get_all_sessions()
+                    for session in self._sessions:
+                        self._sessions_by_id[session.id] = session
 
         # Use Tantivy for all searching and filtering
         results = self._index.search(

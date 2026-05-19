@@ -171,6 +171,29 @@ class TestSearchFunctionality:
         results = configured_search.search("xyznonexistent123")
         assert len(results) == 0
 
+    def test_search_falls_back_to_index_when_writer_lock_is_busy(self, configured_search):
+        """Read-only search should keep working if another process holds the writer lock."""
+        configured_search.get_all_sessions()
+        configured_search._sessions = None
+
+        original_lookup = dict(configured_search._sessions_by_id)
+
+        from unittest.mock import patch
+
+        with (
+            patch.object(configured_search, "_load_from_index", return_value=None),
+            patch.object(
+                configured_search,
+                "get_all_sessions",
+                side_effect=ValueError("LockBusy"),
+            ),
+        ):
+            results = configured_search.search("authentication")
+
+        assert len(results) == 1
+        assert results[0].agent == "claude"
+        assert configured_search._sessions_by_id == original_lookup
+
 
 class TestFiltering:
     """Tests for session filtering."""
