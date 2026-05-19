@@ -67,7 +67,7 @@ That gets worse once you spread work across multiple surfaces:
 ### From GitHub
 
 ```bash
-uv tool install git+https://github.com/Mallet-Dev/omni-resume
+uv tool install git+https://github.com/Mallet-Builds/omni-resume
 ```
 
 This installs:
@@ -80,7 +80,7 @@ This installs:
 ### From source
 
 ```bash
-git clone https://github.com/Mallet-Dev/omni-resume.git
+git clone https://github.com/Mallet-Builds/omni-resume.git
 cd omni-resume
 uv sync
 uv run omni-resume
@@ -191,7 +191,7 @@ Index and parse logs are stored in:
 ## Development
 
 ```bash
-git clone https://github.com/Mallet-Dev/omni-resume.git
+git clone https://github.com/Mallet-Builds/omni-resume.git
 cd omni-resume
 uv sync
 uv run pytest -v
