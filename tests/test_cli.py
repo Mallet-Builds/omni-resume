@@ -12,6 +12,7 @@ from click.testing import CliRunner
 from fast_resume.adapters.claude import ClaudeAdapter
 from fast_resume.adapters.vibe import VibeAdapter
 from fast_resume.cli import (
+    _change_to_resume_directory,
     _list_sessions,
     _resolve_resume_executable,
     _show_stats,
@@ -344,6 +345,29 @@ class TestTUIResumeIntegration:
         assert result.exit_code != 0
         assert "Unable to find the executable for `gemini`" in result.output
 
+    def test_tui_resume_missing_directory_warns_and_continues(self, cli_runner):
+        """Missing saved directories should not crash resume."""
+        with (
+            patch("fast_resume.cli.run_tui") as mock_run_tui,
+            patch("fast_resume.cli.os.chdir", side_effect=FileNotFoundError(2, "No such file or directory")),
+            patch("fast_resume.cli.os.execv") as mock_execv,
+            patch(
+                "fast_resume.cli._resolve_resume_executable",
+                return_value="/usr/local/bin/claude",
+            ),
+        ):
+            mock_run_tui.return_value = (
+                ["claude", "--resume", "123"],
+                "/home/20170130005413/en/Texas",
+            )
+            result = cli_runner.invoke(main, [])
+
+        assert result.exit_code == 0
+        assert "Continuing without changing directories" in result.output
+        mock_execv.assert_called_once_with(
+            "/usr/local/bin/claude", ["claude", "--resume", "123"]
+        )
+
 
 class TestExecutableResolution:
     """Tests for resume executable resolution."""
@@ -363,6 +387,10 @@ class TestExecutableResolution:
                 _resolve_resume_executable("gemini")
                 == "/opt/homebrew/bin/gemini"
             )
+
+    def test_change_to_resume_directory_ignores_empty(self):
+        """Empty directories are a no-op."""
+        _change_to_resume_directory(None)
 
 
 class TestOutputFormatting:

@@ -39,6 +39,22 @@ def _resolve_resume_executable(command: str) -> str | None:
     return None
 
 
+def _change_to_resume_directory(resume_dir: str | None) -> None:
+    """Best-effort change to a session directory before resume."""
+    if not resume_dir:
+        return
+
+    try:
+        os.chdir(resume_dir)
+    except OSError as exc:
+        click.echo(
+            "Warning: unable to change to the saved session directory "
+            f"`{resume_dir}` ({exc.strerror or exc}). Continuing without changing "
+            "directories.",
+            err=True,
+        )
+
+
 @click.command()
 @click.argument("query", required=False, default="")
 @click.option(
@@ -144,9 +160,7 @@ def main(
             no_version_check=no_version_check,
         )
         if resume_cmd:
-            # Change to session directory before running command
-            if resume_dir:
-                os.chdir(resume_dir)
+            _change_to_resume_directory(resume_dir)
             executable = _resolve_resume_executable(resume_cmd[0])
             if not executable:
                 raise click.ClickException(
