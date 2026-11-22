@@ -4,6 +4,8 @@
 
 # omni-resume
 
+**Status: unfinished, work in progress.** It works for my own use, but features and commands may change, and some parts are not complete.
+
 Unified search and resume for coding-agent session history.
 
 `omni-resume` is a public fork/extension of [fast-resume](https://github.com/angristan/fast-resume) focused on real multi-agent setups. It keeps the fast local search experience, adds support for Hermes and Antigravity, and stays honest about where each agent can resume directly versus where the native CLI only supports a project-scoped fallback.
